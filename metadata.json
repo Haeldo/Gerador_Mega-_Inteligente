@@ -1,0 +1,5 @@
+{
+  "name": "Gerador Mega Inteligente",
+  "description": "An intelligent Mega-Sena lottery number generator that analyzes past results to suggest statistically-driven bets. Features data visualization, smart generation via AI, and a modern interface.",
+  "requestFramePermissions": []
+}
