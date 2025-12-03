@@ -1,4 +1,3 @@
-
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
@@ -14,3 +13,16 @@ root.render(
     <App />
   </React.StrictMode>
 );
+
+// Registro do Service Worker para PWA
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/service-worker.js')
+      .then((registration) => {
+        console.log('ServiceWorker registrado com sucesso: ', registration.scope);
+      })
+      .catch((err) => {
+        console.log('Falha no registro do ServiceWorker: ', err);
+      });
+  });
+}

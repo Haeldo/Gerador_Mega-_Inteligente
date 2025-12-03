@@ -3,7 +3,8 @@ import React, { useState, useMemo } from 'react';
 import { AnalysisData } from '../types';
 import { calculateCombinationCount, generateCombinations } from '../services/mathService';
 import { BetSlip } from './BetSlip';
-import { GridIcon, SparklesIcon, TrashIcon } from './icons';
+import { GridIcon, SparklesIcon, TrashIcon, PrinterIcon } from './icons';
+import { generateA4PDF } from '../services/pdfService';
 
 interface ClosingViewProps {
   analysisData: AnalysisData | null;
@@ -65,6 +66,10 @@ export const ClosingView: React.FC<ClosingViewProps> = ({ analysisData, onBetsGe
   const handleSaveToHistory = () => {
       onBetsGenerated(generatedBets, 'intelligent');
       alert(`${generatedBets.length} jogos salvos no histórico!`);
+  };
+
+  const handlePrintA4 = () => {
+      generateA4PDF(generatedBets, "Relatório de Fechamento");
   };
 
   const clearSelection = () => {
@@ -160,14 +165,22 @@ export const ClosingView: React.FC<ClosingViewProps> = ({ analysisData, onBetsGe
       {/* Results */}
       {generatedBets.length > 0 && (
         <div className="space-y-6 animate-fade-in">
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center bg-gray-800 p-4 rounded-lg">
                 <h3 className="text-xl font-bold">Jogos Gerados ({generatedBets.length})</h3>
-                <button 
-                    onClick={handleSaveToHistory}
-                    className="text-sm bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition-colors"
-                >
-                    Salvar no Histórico
-                </button>
+                <div className="flex gap-2">
+                    <button 
+                        onClick={handlePrintA4}
+                        className="flex items-center gap-2 text-sm bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-md transition-colors"
+                    >
+                        <PrinterIcon className="w-4 h-4"/> Imprimir A4
+                    </button>
+                    <button 
+                        onClick={handleSaveToHistory}
+                        className="text-sm bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition-colors"
+                    >
+                        Salvar no Histórico
+                    </button>
+                </div>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

@@ -2,7 +2,8 @@
 import React from 'react';
 import { GeneratedBetsSet } from '../types';
 import { BetSlip } from './BetSlip';
-import { HistoryIcon, TrashIcon } from './icons';
+import { HistoryIcon, TrashIcon, PrinterIcon } from './icons';
+import { generateA4PDF } from '../services/pdfService';
 
 interface HistoryViewProps {
   history: GeneratedBetsSet[];
@@ -20,6 +21,10 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ history, clearHistory 
     );
   }
 
+  const handlePrint = (set: GeneratedBetsSet) => {
+    generateA4PDF(set.bets, `Histórico - ${new Date(set.timestamp).toLocaleString('pt-BR')}`);
+  };
+
   return (
     <div className="space-y-8">
        <div className="flex justify-between items-center">
@@ -30,13 +35,22 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ history, clearHistory 
        </div>
       {history.map((set) => (
         <div key={set.id} className="bg-gray-900 p-4 rounded-lg">
-          <div className="mb-4 pb-2 border-b border-gray-700">
-            <h3 className="font-semibold">
-              Gerado em: {set.timestamp.toLocaleString('pt-BR')}
-            </h3>
-            <p className="text-sm text-gray-400">
-              Modo: <span className="font-medium text-emerald-400">{set.mode === 'intelligent' ? 'Inteligente' : 'Aleatório'}</span>
-            </p>
+          <div className="mb-4 pb-2 border-b border-gray-700 flex justify-between items-center">
+            <div>
+                <h3 className="font-semibold">
+                Gerado em: {new Date(set.timestamp).toLocaleString('pt-BR')}
+                </h3>
+                <p className="text-sm text-gray-400">
+                Modo: <span className="font-medium text-emerald-400">{set.mode === 'intelligent' ? 'Inteligente' : 'Aleatório'}</span>
+                </p>
+            </div>
+            <button 
+                onClick={() => handlePrint(set)}
+                className="flex items-center gap-2 text-sm bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 rounded-md transition-colors"
+                title="Imprimir jogos desta série em A4"
+            >
+                <PrinterIcon className="w-4 h-4"/> Imprimir A4
+            </button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {set.bets.map((bet, index) => (

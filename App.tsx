@@ -16,6 +16,7 @@ import {
   saveAnalysisToStorage,
   clearAllStorage 
 } from './services/storageService';
+import { analyzeDraws } from './services/lotteryService';
 
 type Tab = 'analysis' | 'generator' | 'closing' | 'history' | 'checker';
 
@@ -25,6 +26,9 @@ export default function App() {
   const [draws, setDraws] = useState<LotteryDraw[]>([]);
   const [history, setHistory] = useState<GeneratedBetsSet[]>([]);
   const [dataLoaded, setDataLoaded] = useState(false);
+  
+  // Estado para PWA Install Prompt
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
   // Default to dark theme
   useEffect(() => {
@@ -40,6 +44,18 @@ export default function App() {
     if (storedAnalysis) setAnalysisData(storedAnalysis);
     
     setDataLoaded(true);
+
+    // Listen for PWA install prompt
+    const handleBeforeInstallPrompt = (e: any) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
   }, []);
 
   // Save data whenever it changes (only after initial load)
@@ -61,9 +77,33 @@ export default function App() {
     }
   }, [analysisData, dataLoaded]);
 
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setDeferredPrompt(null);
+    }
+  };
+
   const handleDataAnalyzed = (data: AnalysisData, rawDraws: LotteryDraw[]) => {
     setAnalysisData(data);
     setDraws(rawDraws);
+  };
+
+  const handleManualAdd = (newDraw: LotteryDraw) => {
+    // Check duplication
+    if (draws.some(d => d.id === newDraw.id)) {
+      alert(`O concurso ${newDraw.id} já existe no banco de dados.`);
+      return;
+    }
+
+    const updatedDraws = [newDraw, ...draws].sort((a, b) => b.id - a.id);
+    const updatedAnalysis = analyzeDraws(updatedDraws);
+
+    setDraws(updatedDraws);
+    setAnalysisData(updatedAnalysis);
+    alert('Sorteio adicionado e estatísticas atualizadas com sucesso!');
   };
 
   const addBetsToHistory = (bets: number[][], mode: 'intelligent' | 'random') => {
@@ -102,7 +142,7 @@ export default function App() {
 
   return (
     <div className="bg-slate-900 text-white min-h-screen font-sans">
-      <Header />
+      <Header onInstall={handleInstallClick} showInstallButton={!!deferredPrompt} />
       <main className="container mx-auto p-4 md:p-8">
         <div className="bg-slate-800/50 rounded-lg p-2 md:p-4 max-w-7xl mx-auto ring-1 ring-white/10">
           <div className="flex flex-col sm:flex-row items-center justify-center gap-2 bg-slate-900/60 p-2 rounded-lg mb-6 overflow-x-auto">
@@ -118,6 +158,7 @@ export default function App() {
               <AnalysisView 
                 onDataAnalyzed={handleDataAnalyzed} 
                 onClearData={handleClearDatabase}
+                onManualAdd={handleManualAdd}
                 hasData={!!analysisData}
               />
             )}
