@@ -22,4 +22,5 @@ export interface GeneratedBetsSet {
   timestamp: Date;
   mode: 'intelligent' | 'random';
   bets: number[][];
+  totalCost?: number;
 }

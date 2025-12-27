@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useCallback } from 'react';
 import { AnalysisView } from './components/AnalysisView';
 import { GeneratorView } from './components/GeneratorView';
 import { ClosingView } from './components/ClosingView';
@@ -10,7 +11,6 @@ import { CheckerView } from './components/CheckerView';
 import { 
   getDrawsFromStorage, 
   getHistoryFromStorage, 
-  getAnalysisFromStorage, 
   saveDrawsToStorage, 
   saveHistoryToStorage, 
   saveAnalysisToStorage,
@@ -25,99 +25,92 @@ export default function App() {
   const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null);
   const [draws, setDraws] = useState<LotteryDraw[]>([]);
   const [history, setHistory] = useState<GeneratedBetsSet[]>([]);
-  const [dataLoaded, setDataLoaded] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
   
-  // Estado para PWA Install Prompt
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
-  // Default to dark theme
+  // 1. Inicialização: Carrega do Banco de Dados Local (LocalStorage)
   useEffect(() => {
     document.documentElement.classList.add('dark');
     
-    // Load data from storage on mount
     const storedDraws = getDrawsFromStorage();
     const storedHistory = getHistoryFromStorage();
-    const storedAnalysis = getAnalysisFromStorage();
 
-    if (storedDraws) setDraws(storedDraws);
-    if (storedHistory) setHistory(storedHistory);
-    if (storedAnalysis) setAnalysisData(storedAnalysis);
+    if (storedDraws && storedDraws.length > 0) {
+      setDraws(storedDraws);
+      // Re-analisa para garantir que os dados de IA estejam frescos
+      const analysis = analyzeDraws(storedDraws);
+      setAnalysisData(analysis);
+    }
     
-    setDataLoaded(true);
+    if (storedHistory) {
+      setHistory(storedHistory);
+    }
+    
+    setIsInitialized(true);
 
-    // Listen for PWA install prompt
     const handleBeforeInstallPrompt = (e: any) => {
       e.preventDefault();
       setDeferredPrompt(e);
     };
-
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    };
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
   }, []);
 
-  // Save data whenever it changes (only after initial load)
+  // 2. Persistência Automática: Salva sempre que houver mudanças (apenas após inicializar)
   useEffect(() => {
-    if (dataLoaded) {
+    if (isInitialized) {
       saveDrawsToStorage(draws);
+      if (draws.length > 0) {
+        const analysis = analyzeDraws(draws);
+        setAnalysisData(analysis);
+        saveAnalysisToStorage(analysis);
+      } else {
+        setAnalysisData(null);
+      }
     }
-  }, [draws, dataLoaded]);
+  }, [draws, isInitialized]);
 
   useEffect(() => {
-    if (dataLoaded) {
+    if (isInitialized) {
       saveHistoryToStorage(history);
     }
-  }, [history, dataLoaded]);
-
-  useEffect(() => {
-    if (dataLoaded && analysisData) {
-      saveAnalysisToStorage(analysisData);
-    }
-  }, [analysisData, dataLoaded]);
+  }, [history, isInitialized]);
 
   const handleInstallClick = async () => {
     if (!deferredPrompt) return;
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'accepted') {
-      setDeferredPrompt(null);
-    }
+    if (outcome === 'accepted') setDeferredPrompt(null);
   };
 
   const handleDataAnalyzed = (data: AnalysisData, rawDraws: LotteryDraw[]) => {
-    setAnalysisData(data);
     setDraws(rawDraws);
+    setAnalysisData(data);
   };
 
   const handleManualAdd = (newDraw: LotteryDraw) => {
-    // Check duplication
     if (draws.some(d => d.id === newDraw.id)) {
       alert(`O concurso ${newDraw.id} já existe no banco de dados.`);
       return;
     }
-
-    const updatedDraws = [newDraw, ...draws].sort((a, b) => b.id - a.id);
-    const updatedAnalysis = analyzeDraws(updatedDraws);
-
-    setDraws(updatedDraws);
-    setAnalysisData(updatedAnalysis);
-    alert('Sorteio adicionado e estatísticas atualizadas com sucesso!');
+    setDraws(prev => [newDraw, ...prev].sort((a, b) => b.id - a.id));
+    alert('Sorteio adicionado e salvo com sucesso!');
   };
 
-  const addBetsToHistory = (bets: number[][], mode: 'intelligent' | 'random') => {
+  const addBetsToHistory = (bets: number[][], mode: 'intelligent' | 'random', totalCost: number = 0) => {
     const newSet: GeneratedBetsSet = {
       id: `set-${Date.now()}`,
       timestamp: new Date(),
       mode,
       bets,
+      totalCost
     };
-    setHistory(prevHistory => [newSet, ...prevHistory]);
+    setHistory(prev => [newSet, ...prev]);
   };
 
   const handleClearDatabase = () => {
-    if (window.confirm('Tem certeza que deseja limpar todo o banco de dados? Isso apagará os sorteios importados e o histórico de apostas.')) {
+    if (window.confirm('ATENÇÃO: Deseja apagar permanentemente todos os sorteios e o histórico de apostas do banco de dados local?')) {
       clearAllStorage();
       setDraws([]);
       setHistory([]);
@@ -154,22 +147,31 @@ export default function App() {
           </div>
           
           <div className="transition-opacity duration-300 px-2 md:px-4">
-            {activeTab === 'analysis' && (
-              <AnalysisView 
-                onDataAnalyzed={handleDataAnalyzed} 
-                onClearData={handleClearDatabase}
-                onManualAdd={handleManualAdd}
-                hasData={!!analysisData}
-              />
+            {!isInitialized ? (
+              <div className="flex flex-col items-center justify-center h-64">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500 mb-4"></div>
+                <p className="text-gray-400">Acessando banco de dados local...</p>
+              </div>
+            ) : (
+              <>
+                {activeTab === 'analysis' && (
+                  <AnalysisView 
+                    onDataAnalyzed={handleDataAnalyzed} 
+                    onClearData={handleClearDatabase}
+                    onManualAdd={handleManualAdd}
+                    analysisData={analysisData}
+                  />
+                )}
+                {activeTab === 'generator' && <GeneratorView analysisData={analysisData} onBetsGenerated={addBetsToHistory} />}
+                {activeTab === 'closing' && <ClosingView analysisData={analysisData} onBetsGenerated={addBetsToHistory} />}
+                {activeTab === 'history' && <HistoryView history={history} clearHistory={() => setHistory([])} />}
+                {activeTab === 'checker' && <CheckerView history={history} draws={draws} />}
+              </>
             )}
-            {activeTab === 'generator' && <GeneratorView analysisData={analysisData} onBetsGenerated={addBetsToHistory} />}
-            {activeTab === 'closing' && <ClosingView analysisData={analysisData} onBetsGenerated={addBetsToHistory} />}
-            {activeTab === 'history' && <HistoryView history={history} clearHistory={() => setHistory([])} />}
-            {activeTab === 'checker' && <CheckerView history={history} draws={draws} />}
           </div>
         </div>
         <footer className="text-center text-gray-500 text-xs mt-8">
-          <p>Este aplicativo usa estatísticas para gerar jogos de forma divertida e educativa. Não há garantia de acertos.</p>
+          <p>Os dados são armazenados localmente no seu navegador.</p>
           <p>&copy; 2024 Gerador Mega Inteligente</p>
         </footer>
       </main>

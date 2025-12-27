@@ -8,12 +8,13 @@ import { generateA4PDF } from '../services/pdfService';
 
 interface ClosingViewProps {
   analysisData: AnalysisData | null;
-  onBetsGenerated: (bets: number[][], mode: 'intelligent') => void;
+  onBetsGenerated: (bets: number[][], mode: 'intelligent', totalCost: number) => void;
 }
 
 export const ClosingView: React.FC<ClosingViewProps> = ({ analysisData, onBetsGenerated }) => {
   const [selectedNumbers, setSelectedNumbers] = useState<Set<number>>(new Set());
   const [generatedBets, setGeneratedBets] = useState<number[][]>([]);
+  const [betValue, setBetValue] = useState<number>(5.00); // Valor padrão da aposta
   
   // Constantes de limite para evitar travamento da UI
   const MIN_SELECTION = 6;
@@ -64,8 +65,9 @@ export const ClosingView: React.FC<ClosingViewProps> = ({ analysisData, onBetsGe
   };
 
   const handleSaveToHistory = () => {
-      onBetsGenerated(generatedBets, 'intelligent');
-      alert(`${generatedBets.length} jogos salvos no histórico!`);
+      const totalCost = generatedBets.length * betValue;
+      onBetsGenerated(generatedBets, 'intelligent', totalCost);
+      alert(`${generatedBets.length} jogos salvos no histórico com valor total de R$ ${totalCost.toFixed(2)}!`);
   };
 
   const handlePrintA4 = () => {
@@ -77,7 +79,16 @@ export const ClosingView: React.FC<ClosingViewProps> = ({ analysisData, onBetsGe
       setGeneratedBets([]);
   };
 
+  const handleBetValueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = parseFloat(e.target.value);
+    if (!isNaN(val)) {
+        setBetValue(val);
+    }
+  };
+
   const combinationCount = calculateCombinationCount(selectedNumbers.size, 6);
+  const totalEstimatedCost = combinationCount * betValue;
+
   const hotNumbers = useMemo(() => {
       if (!analysisData) return new Set<number>();
       // Top 10 hot numbers for visual highlighting
@@ -142,20 +153,38 @@ export const ClosingView: React.FC<ClosingViewProps> = ({ analysisData, onBetsGe
         </div>
 
         {/* Footer Actions */}
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 border-t border-gray-700 pt-4">
-            <div className="text-center sm:text-left">
-                <p className="text-gray-300">
-                    Números selecionados: <span className="font-bold text-white">{selectedNumbers.size}</span>
-                </p>
-                <p className="text-sm text-gray-500">
-                    Jogos a gerar: <span className="font-mono text-emerald-400 font-bold">{combinationCount}</span>
-                </p>
+        <div className="flex flex-col xl:flex-row justify-between items-center gap-4 border-t border-gray-700 pt-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full xl:w-auto">
+                <div>
+                    <p className="text-xs text-gray-400">Selecionados</p>
+                    <p className="font-bold text-white text-lg">{selectedNumbers.size}</p>
+                </div>
+                <div>
+                    <p className="text-xs text-gray-400">Total Jogos</p>
+                    <p className="font-mono text-emerald-400 font-bold text-lg">{combinationCount}</p>
+                </div>
+                 <div>
+                    <label htmlFor="closingBetValue" className="text-xs text-gray-400 block mb-1">Valor Unitário</label>
+                    <input
+                        type="number"
+                        id="closingBetValue"
+                        min="0"
+                        step="0.50"
+                        value={betValue}
+                        onChange={handleBetValueChange}
+                        className="bg-gray-700 border border-gray-600 rounded-md p-1 w-20 text-center text-sm focus:outline-none text-white"
+                    />
+                </div>
+                 <div>
+                    <p className="text-xs text-gray-400">Custo Total</p>
+                    <p className="font-bold text-yellow-400 text-lg">R$ {totalEstimatedCost.toFixed(2)}</p>
+                </div>
             </div>
             
             <button
                 onClick={handleGenerate}
                 disabled={selectedNumbers.size < 6}
-                className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-8 rounded-lg transition-all disabled:bg-gray-600 disabled:cursor-not-allowed shadow-lg"
+                className="w-full xl:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-8 rounded-lg transition-all disabled:bg-gray-600 disabled:cursor-not-allowed shadow-lg"
             >
                 Gerar Desdobramento
             </button>
