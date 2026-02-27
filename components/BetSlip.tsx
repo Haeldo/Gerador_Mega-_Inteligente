@@ -62,7 +62,7 @@ export const BetSlip: React.FC<BetSlipProps> = ({ betNumber, numbers, winningNum
                     if (isWinning) {
                         style = 'bg-emerald-500 text-white ring-2 ring-yellow-400 scale-110 shadow-lg';
                     } else {
-                        style = 'bg-gray-600 text-gray-400 opacity-70';
+                        style = 'bg-emerald-600 text-emerald-100 opacity-70';
                     }
                 } else { // Normal display mode
                     style = 'bg-emerald-500 text-white scale-110';

@@ -33,7 +33,22 @@ export const CheckerView: React.FC<CheckerViewProps> = ({ history, draws }) => {
     return new Set(numbers);
   }, [winningNumbersStr]);
 
+  const [manualBetsStr, setManualBetsStr] = useState('');
+
+  const manualBets = useMemo(() => {
+    if (!manualBetsStr.trim()) return [];
+    return manualBetsStr
+      .split('\n')
+      .map(line => 
+        line.split(/[,.\s;-]+/)
+          .map(n => parseInt(n.trim()))
+          .filter(n => !isNaN(n) && n > 0 && n <= 60)
+      )
+      .filter(bet => bet.length >= 6);
+  }, [manualBetsStr]);
+
   const allBets = useMemo(() => history.flatMap(h => h.bets), [history]);
+  const allBetsToCheck = useMemo(() => [...allBets, ...manualBets], [allBets, manualBets]);
 
   const handleCheck = () => {
     if (winningNumbersSet.size === 6) {
@@ -65,11 +80,11 @@ export const CheckerView: React.FC<CheckerViewProps> = ({ history, draws }) => {
   };
 
   const handleCheckHistory = () => {
-      if (draws.length === 0 || allBets.length === 0) return;
+      if (draws.length === 0 || allBetsToCheck.length === 0) return;
 
       const matches: HistoricalMatch[] = [];
 
-      allBets.forEach((bet, betIndex) => {
+      allBetsToCheck.forEach((bet, betIndex) => {
           const betSet = new Set(bet);
           
           draws.forEach(draw => {
@@ -92,16 +107,6 @@ export const CheckerView: React.FC<CheckerViewProps> = ({ history, draws }) => {
       setShowHistoryCheck(true);
       setChecked(false);
   };
-
-  if (history.length === 0) {
-    return (
-      <div className="text-center p-8 text-gray-400 bg-gray-900/50 rounded-lg">
-        <CheckIcon className="w-12 h-12 mx-auto mb-4 text-gray-500"/>
-        <h3 className="text-lg font-semibold">Sem apostas para conferir.</h3>
-        <p>Gere algumas apostas na aba "Gerador" e elas estarão disponíveis aqui para conferência.</p>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-8">
@@ -156,6 +161,29 @@ export const CheckerView: React.FC<CheckerViewProps> = ({ history, draws }) => {
             </div>
         </div>
 
+        {/* Manual Bets Input */}
+        <div className="pt-4 border-t border-gray-700">
+            <label htmlFor="manualBets" className="font-semibold block mb-2 text-sm text-gray-400">
+                Inserir jogos manualmente (um jogo por linha, separe os números por vírgula ou espaço):
+            </label>
+            <textarea
+                id="manualBets"
+                value={manualBetsStr}
+                onChange={(e) => {
+                    setManualBetsStr(e.target.value);
+                    setChecked(false);
+                    setShowHistoryCheck(false);
+                }}
+                placeholder="Ex:&#10;1, 2, 3, 4, 5, 6&#10;10 20 30 40 50 60"
+                className="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white focus:ring-emerald-500 focus:border-emerald-500 font-mono text-sm h-24 resize-y"
+            />
+            {manualBets.length > 0 && (
+                <p className="text-xs text-emerald-400 mt-1">
+                    {manualBets.length} jogo(s) manual(is) identificado(s) e pronto(s) para conferência.
+                </p>
+            )}
+        </div>
+
         {/* Historic Check Button */}
         {draws.length > 0 && (
             <div className="pt-4 border-t border-gray-700 text-center">
@@ -181,11 +209,24 @@ export const CheckerView: React.FC<CheckerViewProps> = ({ history, draws }) => {
                     Sorteio: {winningNumbersStr}
                 </span>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {allBets.map((bet, index) => (
-                    <BetSlip key={index} betNumber={index + 1} numbers={bet} winningNumbers={winningNumbersSet} />
-                ))}
-            </div>
+            {allBetsToCheck.length === 0 ? (
+                <div className="bg-gray-800 p-6 rounded-lg text-center text-gray-400">
+                    <p>Nenhuma aposta para conferir. Gere apostas ou insira manualmente.</p>
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {allBetsToCheck.map((bet, index) => (
+                        <div key={index} className="relative">
+                            {index >= allBets.length && (
+                                <span className="absolute -top-2 -right-2 bg-indigo-500 text-white text-[10px] font-bold px-2 py-1 rounded-full z-10">
+                                    Manual
+                                </span>
+                            )}
+                            <BetSlip betNumber={index < allBets.length ? index + 1 : index - allBets.length + 1} numbers={bet} winningNumbers={winningNumbersSet} />
+                        </div>
+                    ))}
+                </div>
+            )}
         </div>
       )}
 
@@ -208,7 +249,9 @@ export const CheckerView: React.FC<CheckerViewProps> = ({ history, draws }) => {
                             <div key={idx} className="bg-slate-800 p-4 rounded-lg border border-slate-700 flex flex-col gap-2">
                                 <div className="flex justify-between items-start">
                                     <div className="flex items-center gap-2">
-                                        <span className="bg-gray-700 text-xs px-2 py-1 rounded">Aposta #{match.betIndex}</span>
+                                        <span className="bg-gray-700 text-xs px-2 py-1 rounded">
+                                            {match.betIndex <= allBets.length ? `Aposta Gerada #${match.betIndex}` : `Aposta Manual #${match.betIndex - allBets.length}`}
+                                        </span>
                                         <span className={`text-xs font-bold px-2 py-1 rounded ${
                                             match.hits === 6 ? 'bg-emerald-500 text-white' : 
                                             match.hits === 5 ? 'bg-blue-500 text-white' : 'bg-yellow-600 text-white'
@@ -235,7 +278,7 @@ export const CheckerView: React.FC<CheckerViewProps> = ({ history, draws }) => {
                                     <p className="text-gray-400 text-xs mb-1">Sua Aposta:</p>
                                     <div className="flex flex-wrap gap-1">
                                          {match.betNumbers.map(n => (
-                                            <span key={n} className={`w-6 h-6 flex items-center justify-center rounded-full text-xs ${match.drawNumbers.includes(n) ? 'bg-emerald-500 text-white font-bold' : 'bg-gray-700 text-gray-400'}`}>
+                                            <span key={n} className={`w-6 h-6 flex items-center justify-center rounded-full text-xs ${match.drawNumbers.includes(n) ? 'bg-emerald-500 text-white font-bold ring-2 ring-yellow-400' : 'bg-emerald-600 text-emerald-100 opacity-70'}`}>
                                                 {n}
                                             </span>
                                         ))}
