@@ -218,7 +218,7 @@ export const CheckerView: React.FC<CheckerViewProps> = ({ history, draws }) => {
                     {allBetsToCheck.map((bet, index) => (
                         <div key={index} className="relative">
                             {index >= allBets.length && (
-                                <span className="absolute -top-2 -right-2 bg-indigo-500 text-white text-[10px] font-bold px-2 py-1 rounded-full z-10">
+                                <span className="absolute -top-2 -left-2 bg-indigo-500 text-white text-[10px] font-bold px-2 py-1 rounded-full z-10">
                                     Manual
                                 </span>
                             )}
