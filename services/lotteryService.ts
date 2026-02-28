@@ -155,6 +155,117 @@ export const parseExcelFile = (file: File): Promise<LotteryDraw[]> => {
   });
 };
 
+export const updateDraws = async (currentDraws: LotteryDraw[]): Promise<LotteryDraw[]> => {
+  const fetchWithFallback = async (url: string) => {
+    if (!navigator.onLine) {
+      throw new Error('Você parece estar offline. Verifique sua conexão com a internet.');
+    }
+
+    const proxies = [
+      { url: (u: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`, type: 'raw' },
+      { url: (u: string) => `https://api.allorigins.win/get?url=${encodeURIComponent(u)}`, type: 'wrapped' },
+      { url: (u: string) => `https://corsproxy.io/?${encodeURIComponent(u)}`, type: 'raw' },
+      { url: (u: string) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`, type: 'raw' },
+      { url: (u: string) => `https://thingproxy.freeboard.io/fetch/${u}`, type: 'raw' },
+      { url: (u: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}&timestamp=${Date.now()}`, type: 'raw' } // Cache busting
+    ];
+
+    let lastError = null;
+    for (const proxy of proxies) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+
+        const response = await fetch(proxy.url(url), { 
+          cache: 'no-store',
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+
+        if (response.ok) {
+          const text = await response.text();
+          let jsonData;
+          
+          try {
+            // Try direct parse
+            jsonData = JSON.parse(text);
+            // If it's wrapped by AllOrigins
+            if (proxy.type === 'wrapped' && jsonData.contents) {
+              jsonData = JSON.parse(jsonData.contents);
+            }
+          } catch (e) {
+            // If direct parse failed, maybe it's wrapped but we didn't mark it as such
+            try {
+              const wrapped = JSON.parse(text);
+              if (wrapped.contents) {
+                jsonData = JSON.parse(wrapped.contents);
+              } else {
+                continue; // Not the data we want
+              }
+            } catch (e2) {
+              continue; // Not JSON at all
+            }
+          }
+
+          // Validate that it looks like a Caixa response
+          if (jsonData && (jsonData.numero || jsonData.listaDezenas)) {
+            return jsonData;
+          }
+        }
+      } catch (e) {
+        lastError = e;
+        console.warn(`Falha no proxy ao acessar ${url}, tentando próximo...`, e);
+        // Small delay before next proxy to avoid spamming
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    }
+    throw lastError || new Error('Não foi possível acessar a API da Caixa através dos proxies disponíveis.');
+  };
+
+  try {
+    const latestLocalId = currentDraws.length > 0 ? Math.max(...currentDraws.map(d => d.id)) : 0;
+    const apiUrl = 'https://servicebus2.caixa.gov.br/portaldeloterias/api/megasena/';
+    
+    const latestData = await fetchWithFallback(apiUrl);
+    const latestApiId = latestData.numero;
+
+    if (!latestApiId || latestApiId <= latestLocalId) {
+      return []; 
+    }
+
+    const newDraws: LotteryDraw[] = [];
+    const drawsToFetch = latestApiId - latestLocalId;
+    // Fetch up to 15 at a time to be more efficient but still safe
+    const maxToFetch = Math.min(drawsToFetch, 15); 
+
+    // Fetch sequentially or in small batches to avoid triggering proxy rate limits
+    for (let i = latestLocalId + 1; i <= latestLocalId + maxToFetch; i++) {
+      try {
+        const url = `${apiUrl}${i}`;
+        const data = await fetchWithFallback(url);
+        if (data && data.numero && data.listaDezenas) {
+          newDraws.push({
+            id: data.numero,
+            date: data.dataApuracao,
+            numbers: data.listaDezenas.map((n: string) => parseInt(n, 10)).sort((a: number, b: number) => a - b)
+          });
+        }
+        // Small delay between successful fetches
+        await new Promise(resolve => setTimeout(resolve, 300));
+      } catch (e) {
+        console.warn(`Falha ao buscar concurso ${i}, pulando...`);
+      }
+    }
+
+    return newDraws.sort((a, b) => b.id - a.id);
+  } catch (error) {
+    console.error('Erro ao atualizar sorteios:', error);
+    const msg = error instanceof Error ? error.message : 'Erro desconhecido';
+    throw new Error(`Falha ao buscar novos resultados: ${msg}. Tente novamente em alguns instantes.`);
+  }
+};
+
 export const analyzeDraws = (draws: LotteryDraw[]): AnalysisData => {
   const statsMap: Map<number, { count: number; lastSeenIndex: number }> = new Map();
 

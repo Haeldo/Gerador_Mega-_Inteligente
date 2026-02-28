@@ -10,6 +10,8 @@ interface AnalysisViewProps {
   onDataAnalyzed: (data: AnalysisData, draws: LotteryDraw[]) => void;
   onClearData: () => void;
   onManualAdd: (newDraw: LotteryDraw) => void;
+  onUpdateData: () => void;
+  isUpdating?: boolean;
   analysisData: AnalysisData | null;
 }
 
@@ -85,10 +87,16 @@ const ManualEntryForm: React.FC<{ onSave: (draw: LotteryDraw) => void, onCancel:
     );
 };
 
-export const AnalysisView: React.FC<AnalysisViewProps> = ({ onDataAnalyzed, onClearData, onManualAdd, analysisData }) => {
+export const AnalysisView: React.FC<AnalysisViewProps> = ({ onDataAnalyzed, onClearData, onManualAdd, onUpdateData, isUpdating, analysisData }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [showManualForm, setShowManualForm] = useState(false);
+
+    React.useEffect(() => {
+        if (!analysisData) {
+            setError(null);
+        }
+    }, [analysisData]);
 
     const onDrop = useCallback(async (acceptedFiles: File[]) => {
         const file = acceptedFiles[0];
@@ -107,6 +115,7 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ onDataAnalyzed, onCl
         }
     }, [onDataAnalyzed]);
 
+    // @ts-ignore - React 19 type mismatch with react-dropzone
     const { getRootProps, getInputProps, isDragActive } = useDropzone({
         onDrop,
         accept: {
@@ -187,6 +196,18 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ onDataAnalyzed, onCl
                             </div>
                         </div>
                         <div className="flex gap-2">
+                             <button onClick={onUpdateData} disabled={isUpdating} className="text-xs bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-800 disabled:cursor-not-allowed text-white px-3 py-2 rounded-md transition-colors flex items-center gap-2">
+                                {isUpdating ? (
+                                  <>
+                                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
+                                    Atualizando...
+                                  </>
+                                ) : (
+                                  <>
+                                    <TrendingUpIcon className="w-3 h-3"/> Atualizar
+                                  </>
+                                )}
+                             </button>
                              <button onClick={() => setShowManualForm(true)} className="text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-md transition-colors flex items-center gap-2">
                                 + Adicionar
                              </button>
@@ -214,7 +235,12 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ onDataAnalyzed, onCl
                                     <CartesianGrid strokeDasharray="3 3" stroke="#475569" strokeOpacity={0.5} />
                                     <XAxis dataKey="number" stroke="#94A3B8" fontSize={12} />
                                     <YAxis stroke="#94A3B8" fontSize={12} />
-                                    <Tooltip cursor={{fill: '#334155'}} contentStyle={{ backgroundColor: '#1E293B', border: '1px solid #475569', color: '#CBD5E1' }} />
+                                    <Tooltip 
+                                        cursor={{fill: '#334155'}} 
+                                        contentStyle={{ backgroundColor: '#1E293B', border: '1px solid #475569', borderRadius: '8px' }}
+                                        labelStyle={{ color: '#fff', fontWeight: 'bold' }}
+                                        itemStyle={{ color: '#10B981' }}
+                                    />
                                     <Bar dataKey="count" name="Frequência">
                                         {top10Frequent.map((entry, index) => (
                                             <Cell key={`cell-${index}`} fill="#10B981" />
@@ -230,7 +256,12 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ onDataAnalyzed, onCl
                                     <CartesianGrid strokeDasharray="3 3" stroke="#475569" strokeOpacity={0.5} />
                                     <XAxis dataKey="number" stroke="#94A3B8" fontSize={12} />
                                     <YAxis stroke="#94A3B8" fontSize={12} />
-                                    <Tooltip cursor={{fill: '#334155'}} contentStyle={{ backgroundColor: '#1E293B', border: '1px solid #475569', color: '#CBD5E1' }} />
+                                    <Tooltip 
+                                        cursor={{fill: '#334155'}} 
+                                        contentStyle={{ backgroundColor: '#1E293B', border: '1px solid #475569', borderRadius: '8px' }}
+                                        labelStyle={{ color: '#fff', fontWeight: 'bold' }}
+                                        itemStyle={{ color: '#F59E0B' }}
+                                    />
                                     <Bar dataKey="delay" name="Atraso">
                                          {top10Delayed.map((entry, index) => (
                                             <Cell key={`cell-${index}`} fill="#F59E0B" />
@@ -247,7 +278,12 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ onDataAnalyzed, onCl
                                  <CartesianGrid strokeDasharray="3 3" stroke="#475569" strokeOpacity={0.5} />
                                  <XAxis dataKey="number" stroke="#94A3B8" fontSize={10} angle={-45} textAnchor="end" height={50} interval={0} />
                                  <YAxis stroke="#94A3B8" fontSize={12} />
-                                 <Tooltip cursor={{fill: '#334155'}} contentStyle={{ backgroundColor: '#1E293B', border: '1px solid #475569', color: '#CBD5E1' }} />
+                                 <Tooltip 
+                                    cursor={{fill: '#334155'}} 
+                                    contentStyle={{ backgroundColor: '#1E293B', border: '1px solid #475569', borderRadius: '8px' }}
+                                    labelStyle={{ color: '#fff', fontWeight: 'bold' }}
+                                    itemStyle={{ color: '#10B981' }}
+                                 />
                                  <Line type="monotone" dataKey="count" name="Frequência" stroke="#10B981" strokeWidth={2} dot={{ r: 2, fill: '#10B981' }} />
                             </LineChart>
                         </ResponsiveContainer>

@@ -16,7 +16,7 @@ import {
   saveAnalysisToStorage,
   clearAllStorage 
 } from './services/storageService';
-import { analyzeDraws } from './services/lotteryService';
+import { analyzeDraws, updateDraws } from './services/lotteryService';
 
 type Tab = 'analysis' | 'generator' | 'closing' | 'history' | 'checker';
 
@@ -26,6 +26,7 @@ export default function App() {
   const [draws, setDraws] = useState<LotteryDraw[]>([]);
   const [history, setHistory] = useState<GeneratedBetsSet[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
   
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
@@ -98,6 +99,29 @@ export default function App() {
     alert('Sorteio adicionado e salvo com sucesso!');
   };
 
+  const handleUpdateData = async () => {
+    if (isUpdating) return;
+    setIsUpdating(true);
+    try {
+      const newDraws = await updateDraws(draws);
+      if (newDraws.length > 0) {
+        setDraws(prev => {
+          const combined = [...newDraws, ...prev];
+          // Remove duplicates just in case
+          const uniqueDraws = Array.from(new Map(combined.map(item => [item.id, item])).values());
+          return uniqueDraws.sort((a, b) => b.id - a.id);
+        });
+        alert(`${newDraws.length} novo(s) sorteio(s) atualizado(s) com sucesso!`);
+      } else {
+        alert('O banco de dados já está atualizado com o último sorteio da Caixa.');
+      }
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Erro ao atualizar os sorteios.');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   const addBetsToHistory = (bets: number[][], mode: 'intelligent' | 'random', totalCost: number = 0) => {
     const newSet: GeneratedBetsSet = {
       id: `set-${Date.now()}`,
@@ -109,15 +133,25 @@ export default function App() {
     setHistory(prev => [newSet, ...prev]);
   };
 
-  const handleClearDatabase = () => {
+  const handleClearDatabase = useCallback(() => {
     if (window.confirm('ATENÇÃO: Deseja apagar permanentemente todos os sorteios e o histórico de apostas do banco de dados local?')) {
-      clearAllStorage();
-      setDraws([]);
-      setHistory([]);
-      setAnalysisData(null);
-      alert('Banco de dados limpo com sucesso.');
+      try {
+        // Clear storage keys
+        clearAllStorage();
+        
+        // Reset all relevant states
+        setDraws([]);
+        setHistory([]);
+        setAnalysisData(null);
+        setIsUpdating(false);
+        
+        alert('Banco de dados limpo com sucesso.');
+      } catch (error) {
+        console.error('Erro ao limpar banco de dados:', error);
+        alert('Ocorreu um erro ao tentar limpar o banco de dados.');
+      }
     }
-  };
+  }, []);
 
   const TabButton = ({ tab, label, icon }: { tab: Tab; label: string, icon: React.ReactNode }) => (
     <button
@@ -159,6 +193,8 @@ export default function App() {
                     onDataAnalyzed={handleDataAnalyzed} 
                     onClearData={handleClearDatabase}
                     onManualAdd={handleManualAdd}
+                    onUpdateData={handleUpdateData}
+                    isUpdating={isUpdating}
                     analysisData={analysisData}
                   />
                 )}
