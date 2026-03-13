@@ -5,9 +5,10 @@ import { GeneratorView } from './components/GeneratorView';
 import { ClosingView } from './components/ClosingView';
 import { Header } from './components/Header';
 import { AnalysisData, GeneratedBetsSet, LotteryDraw } from './types';
-import { ChartIcon, SparklesIcon, HistoryIcon, CheckIcon, GridIcon } from './components/icons';
+import { ChartIcon, SparklesIcon, HistoryIcon, CheckIcon, GridIcon, TrophyIcon } from './components/icons';
 import { HistoryView } from './components/HistoryView';
 import { CheckerView } from './components/CheckerView';
+import { WinnersView } from './components/WinnersView';
 import { 
   getDrawsFromStorage, 
   getHistoryFromStorage, 
@@ -18,7 +19,7 @@ import {
 } from './services/storageService';
 import { analyzeDraws, updateDraws } from './services/lotteryService';
 
-type Tab = 'analysis' | 'generator' | 'closing' | 'history' | 'checker';
+type Tab = 'analysis' | 'generator' | 'closing' | 'history' | 'checker' | 'winners';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('analysis');
@@ -156,7 +157,7 @@ export default function App() {
   const TabButton = ({ tab, label, icon }: { tab: Tab; label: string, icon: React.ReactNode }) => (
     <button
       onClick={() => setActiveTab(tab)}
-      className={`flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold rounded-full transition-all duration-300 w-full sm:w-auto ${
+      className={`flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold rounded-full transition-all duration-300 flex-shrink-0 ${
         activeTab === tab
           ? 'bg-emerald-500 text-white shadow-lg'
           : 'text-gray-400 hover:bg-gray-700/50 hover:text-white'
@@ -172,12 +173,13 @@ export default function App() {
       <Header onInstall={handleInstallClick} showInstallButton={!!deferredPrompt} />
       <main className="container mx-auto p-4 md:p-8">
         <div className="bg-slate-800/50 rounded-lg p-2 md:p-4 max-w-7xl mx-auto ring-1 ring-white/10">
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-2 bg-slate-900/60 p-2 rounded-lg mb-6 overflow-x-auto">
+          <div className="flex overflow-x-auto whitespace-nowrap pb-2 mb-6 gap-2 bg-slate-900/60 p-2 rounded-lg scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
             <TabButton tab="analysis" label="Análise" icon={<ChartIcon />} />
             <TabButton tab="generator" label="Gerador IA" icon={<SparklesIcon />} />
             <TabButton tab="closing" label="Fechamento" icon={<GridIcon />} />
             <TabButton tab="history" label="Histórico" icon={<HistoryIcon />} />
             <TabButton tab="checker" label="Conferir" icon={<CheckIcon />} />
+            <TabButton tab="winners" label="Ganhadores" icon={<TrophyIcon />} />
           </div>
           
           <div className="transition-opacity duration-300 px-2 md:px-4">
@@ -202,6 +204,7 @@ export default function App() {
                 {activeTab === 'closing' && <ClosingView analysisData={analysisData} onBetsGenerated={addBetsToHistory} />}
                 {activeTab === 'history' && <HistoryView history={history} clearHistory={() => setHistory([])} />}
                 {activeTab === 'checker' && <CheckerView history={history} draws={draws} />}
+                {activeTab === 'winners' && <WinnersView />}
               </>
             )}
           </div>

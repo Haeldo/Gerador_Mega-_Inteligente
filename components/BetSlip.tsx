@@ -49,9 +49,9 @@ export const BetSlip: React.FC<BetSlipProps> = ({ betNumber, numbers, winningNum
            {hits} {hits === 1 ? 'Acerto' : 'Acertos'}
          </div>
       )}
-      <div ref={slipRef} className="bg-gray-800 p-4">
+      <div ref={slipRef} className="bg-gray-800 p-2 sm:p-4">
         <h4 className="font-bold text-lg mb-4 text-emerald-400 text-center">Aposta #{betNumber}</h4>
-        <div className="grid grid-cols-10 gap-1.5">
+        <div className="grid grid-cols-10 gap-1 sm:gap-1.5">
           {Array.from({ length: 60 }, (_, i) => i + 1).map((num) => {
             const isSelected = numbersSet.has(num);
             const isWinning = winningNumbers?.has(num);
@@ -72,7 +72,7 @@ export const BetSlip: React.FC<BetSlipProps> = ({ betNumber, numbers, winningNum
             return (
               <div
                 key={num}
-                className={`w-7 h-7 flex items-center justify-center text-xs font-bold rounded-full transition-all ${style}`}
+                className={`w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-[10px] sm:text-xs font-bold rounded-full transition-all ${style}`}
               >
                 {String(num).padStart(2, '0')}
               </div>

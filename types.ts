@@ -5,6 +5,20 @@ export interface LotteryDraw {
   numbers: number[];
 }
 
+export interface DrawDetails {
+  numero: number;
+  dataApuracao: string;
+  localSorteio: string;
+  nomeMunicipioUFSorteio: string;
+  valorAcumuladoPrximoConcurso: number;
+  listaDezenas: string[];
+  listaRateioPremio: {
+    descricaoFaixa: string;
+    numeroDeGanhadores: number;
+    valorPremio: number;
+  }[];
+}
+
 export interface NumberStat {
   number: number;
   count: number;

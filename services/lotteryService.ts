@@ -155,80 +155,94 @@ export const parseExcelFile = (file: File): Promise<LotteryDraw[]> => {
   });
 };
 
-export const updateDraws = async (currentDraws: LotteryDraw[]): Promise<LotteryDraw[]> => {
-  const fetchWithFallback = async (url: string) => {
-    if (!navigator.onLine) {
-      throw new Error('Você parece estar offline. Verifique sua conexão com a internet.');
-    }
+const fetchWithFallback = async (url: string) => {
+  if (!navigator.onLine) {
+    throw new Error('Você parece estar offline. Verifique sua conexão com a internet.');
+  }
 
-    const proxies = [
-      { url: (u: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`, type: 'raw' },
-      { url: (u: string) => `https://api.allorigins.win/get?url=${encodeURIComponent(u)}`, type: 'wrapped' },
-      { url: (u: string) => `https://corsproxy.io/?${encodeURIComponent(u)}`, type: 'raw' },
-      { url: (u: string) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`, type: 'raw' },
-      { url: (u: string) => `https://thingproxy.freeboard.io/fetch/${u}`, type: 'raw' },
-      { url: (u: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}&timestamp=${Date.now()}`, type: 'raw' } // Cache busting
-    ];
+  const proxies = [
+    { url: (u: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`, type: 'raw' },
+    { url: (u: string) => `https://api.allorigins.win/get?url=${encodeURIComponent(u)}`, type: 'wrapped' },
+    { url: (u: string) => `https://corsproxy.io/?${encodeURIComponent(u)}`, type: 'raw' },
+    { url: (u: string) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`, type: 'raw' },
+    { url: (u: string) => `https://thingproxy.freeboard.io/fetch/${u}`, type: 'raw' },
+    { url: (u: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}&timestamp=${Date.now()}`, type: 'raw' } // Cache busting
+  ];
 
-    let lastError = null;
-    for (const proxy of proxies) {
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+  let lastError = null;
+  for (const proxy of proxies) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
 
-        const response = await fetch(proxy.url(url), { 
-          cache: 'no-store',
-          signal: controller.signal
-        });
+      const response = await fetch(proxy.url(url), { 
+        cache: 'no-store',
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+
+      if (response.ok) {
+        const text = await response.text();
+        let jsonData;
         
-        clearTimeout(timeoutId);
-
-        if (response.ok) {
-          const text = await response.text();
-          let jsonData;
-          
-          try {
-            // Try direct parse
-            jsonData = JSON.parse(text);
-            // If it's wrapped by AllOrigins
-            if (proxy.type === 'wrapped' && jsonData.contents) {
-              jsonData = JSON.parse(jsonData.contents);
-            }
-          } catch (e) {
-            // If direct parse failed, maybe it's wrapped but we didn't mark it as such
-            try {
-              const wrapped = JSON.parse(text);
-              if (wrapped.contents) {
-                jsonData = JSON.parse(wrapped.contents);
-              } else {
-                continue; // Not the data we want
-              }
-            } catch (e2) {
-              continue; // Not JSON at all
-            }
+        try {
+          // Try direct parse
+          jsonData = JSON.parse(text);
+          // If it's wrapped by AllOrigins
+          if (proxy.type === 'wrapped' && jsonData.contents) {
+            jsonData = JSON.parse(jsonData.contents);
           }
-
-          // Validate that it looks like a Caixa response
-          if (jsonData && (jsonData.numero || jsonData.listaDezenas)) {
-            return jsonData;
+        } catch (e) {
+          // If direct parse failed, maybe it's wrapped but we didn't mark it as such
+          try {
+            const wrapped = JSON.parse(text);
+            if (wrapped.contents) {
+              jsonData = JSON.parse(wrapped.contents);
+            } else {
+              continue; // Not the data we want
+            }
+          } catch (e2) {
+            continue; // Not JSON at all
           }
         }
-      } catch (e) {
-        lastError = e;
-        console.warn(`Falha no proxy ao acessar ${url}, tentando próximo...`, e);
-        // Small delay before next proxy to avoid spamming
-        await new Promise(resolve => setTimeout(resolve, 500));
-      }
-    }
-    throw lastError || new Error('Não foi possível acessar a API da Caixa através dos proxies disponíveis.');
-  };
 
+        // Validate that it looks like a Caixa response
+        if (jsonData && (jsonData.numero || jsonData.listaDezenas)) {
+          return jsonData;
+        }
+      }
+    } catch (e) {
+      lastError = e;
+      console.warn(`Falha no proxy ao acessar ${url}, tentando próximo...`, e);
+      // Small delay before next proxy to avoid spamming
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+  }
+  throw lastError || new Error('Não foi possível acessar a API da Caixa através dos proxies disponíveis.');
+};
+
+export const updateDraws = async (currentDraws: LotteryDraw[]): Promise<LotteryDraw[]> => {
   try {
     const latestLocalId = currentDraws.length > 0 ? Math.max(...currentDraws.map(d => d.id)) : 0;
-    const apiUrl = 'https://servicebus2.caixa.gov.br/portaldeloterias/api/megasena/';
     
-    const latestData = await fetchWithFallback(apiUrl);
-    const latestApiId = latestData.numero;
+    // Try Heroku API first for latest
+    let latestApiId = 0;
+    try {
+      const res = await fetch('https://loteriascaixa-api.herokuapp.com/api/megasena/latest');
+      if (res.ok) {
+        const data = await res.json();
+        latestApiId = data.concurso;
+      }
+    } catch (e) {
+      console.warn('Heroku API failed for latest, falling back to Caixa API');
+    }
+
+    if (!latestApiId) {
+      const apiUrl = 'https://servicebus2.caixa.gov.br/portaldeloterias/api/megasena/';
+      const latestData = await fetchWithFallback(apiUrl);
+      latestApiId = latestData.numero;
+    }
 
     if (!latestApiId || latestApiId <= latestLocalId) {
       return []; 
@@ -236,14 +250,30 @@ export const updateDraws = async (currentDraws: LotteryDraw[]): Promise<LotteryD
 
     const newDraws: LotteryDraw[] = [];
     const drawsToFetch = latestApiId - latestLocalId;
-    // Fetch up to 15 at a time to be more efficient but still safe
     const maxToFetch = Math.min(drawsToFetch, 15); 
 
-    // Fetch sequentially or in small batches to avoid triggering proxy rate limits
     for (let i = latestLocalId + 1; i <= latestLocalId + maxToFetch; i++) {
       try {
-        const url = `${apiUrl}${i}`;
-        const data = await fetchWithFallback(url);
+        let data: any = null;
+        try {
+          const res = await fetch(`https://loteriascaixa-api.herokuapp.com/api/megasena/${i}`);
+          if (res.ok) {
+            const herokuData = await res.json();
+            data = {
+              numero: herokuData.concurso,
+              dataApuracao: herokuData.data,
+              listaDezenas: herokuData.dezenas
+            };
+          }
+        } catch (e) {
+          // Fallback
+        }
+
+        if (!data) {
+          const url = `https://servicebus2.caixa.gov.br/portaldeloterias/api/megasena/${i}`;
+          data = await fetchWithFallback(url);
+        }
+
         if (data && data.numero && data.listaDezenas) {
           newDraws.push({
             id: data.numero,
@@ -251,7 +281,6 @@ export const updateDraws = async (currentDraws: LotteryDraw[]): Promise<LotteryD
             numbers: data.listaDezenas.map((n: string) => parseInt(n, 10)).sort((a: number, b: number) => a - b)
           });
         }
-        // Small delay between successful fetches
         await new Promise(resolve => setTimeout(resolve, 300));
       } catch (e) {
         console.warn(`Falha ao buscar concurso ${i}, pulando...`);
@@ -263,6 +292,53 @@ export const updateDraws = async (currentDraws: LotteryDraw[]): Promise<LotteryD
     console.error('Erro ao atualizar sorteios:', error);
     const msg = error instanceof Error ? error.message : 'Erro desconhecido';
     throw new Error(`Falha ao buscar novos resultados: ${msg}. Tente novamente em alguns instantes.`);
+  }
+};
+
+export const fetchDrawDetails = async (drawNumber?: number): Promise<any> => {
+  try {
+    // Try Heroku API first
+    try {
+      const url = drawNumber 
+        ? `https://loteriascaixa-api.herokuapp.com/api/megasena/${drawNumber}`
+        : 'https://loteriascaixa-api.herokuapp.com/api/megasena/latest';
+      
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = await res.json();
+        // Map to expected format
+        return {
+          numero: data.concurso,
+          dataApuracao: data.data,
+          localSorteio: data.local ? data.local.split(' em ')[0] : '',
+          nomeMunicipioUFSorteio: data.local && data.local.includes(' em ') ? data.local.split(' em ')[1] : data.local,
+          valorAcumuladoPrximoConcurso: data.valorAcumuladoProximoConcurso,
+          listaDezenas: data.dezenas,
+          listaRateioPremio: data.premiacoes.map((p: any) => ({
+            descricaoFaixa: p.descricao,
+            numeroDeGanhadores: p.ganhadores,
+            valorPremio: p.valorPremio
+          }))
+        };
+      }
+    } catch (e) {
+      console.warn('Heroku API failed, falling back to Caixa API', e);
+    }
+
+    // Fallback to Caixa API
+    const apiUrl = 'https://servicebus2.caixa.gov.br/portaldeloterias/api/megasena/';
+    const url = drawNumber ? `${apiUrl}${drawNumber}` : apiUrl;
+    const data = await fetchWithFallback(url);
+    
+    // Ensure valorAcumuladoPrximoConcurso is mapped correctly if API returns valorAcumuladoProximoConcurso
+    if (data && data.valorAcumuladoProximoConcurso !== undefined && data.valorAcumuladoPrximoConcurso === undefined) {
+      data.valorAcumuladoPrximoConcurso = data.valorAcumuladoProximoConcurso;
+    }
+    
+    return data;
+  } catch (error) {
+    console.error(`Erro ao buscar detalhes do concurso ${drawNumber || 'mais recente'}:`, error);
+    throw new Error('Falha ao buscar detalhes do concurso. Tente novamente em alguns instantes.');
   }
 };
 

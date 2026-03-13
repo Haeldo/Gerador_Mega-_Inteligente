@@ -203,9 +203,9 @@ export const CheckerView: React.FC<CheckerViewProps> = ({ history, draws }) => {
       {/* Results View: Manual/Single Check */}
       {checked && (
         <div className="space-y-6 animate-fade-in">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                 <h3 className="text-xl font-bold">Resultados da Conferência</h3>
-                <span className="text-sm bg-gray-700 px-3 py-1 rounded-full text-gray-300">
+                <span className="text-sm bg-gray-700 px-3 py-1 rounded-full text-gray-300 break-all">
                     Sorteio: {winningNumbersStr}
                 </span>
             </div>

@@ -187,15 +187,15 @@ export const AnalysisView: React.FC<AnalysisViewProps> = ({ onDataAnalyzed, onCl
               </div>
             ) : (
                 <div className="space-y-6">
-                    <div className="flex justify-between items-center bg-slate-800 p-4 rounded-lg border-l-4 border-emerald-500">
-                        <div className="flex items-center gap-3">
-                            <DatabaseIcon className="w-6 h-6 text-emerald-400" />
+                    <div className="flex flex-col md:flex-row justify-between items-center bg-slate-800 p-4 rounded-lg border-l-4 border-emerald-500 gap-4">
+                        <div className="flex items-center gap-3 w-full md:w-auto">
+                            <DatabaseIcon className="w-6 h-6 text-emerald-400 flex-shrink-0" />
                             <div>
                                 <h3 className="font-bold text-white">Banco de Dados Ativo</h3>
                                 <p className="text-xs text-gray-400">Os dados estão salvos e persistentes neste navegador.</p>
                             </div>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap justify-center md:justify-end gap-2 w-full md:w-auto">
                              <button onClick={onUpdateData} disabled={isUpdating} className="text-xs bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-800 disabled:cursor-not-allowed text-white px-3 py-2 rounded-md transition-colors flex items-center gap-2">
                                 {isUpdating ? (
                                   <>

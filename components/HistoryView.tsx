@@ -27,9 +27,9 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ history, clearHistory 
 
   return (
     <div className="space-y-8">
-       <div className="flex justify-between items-center">
+       <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
          <h2 className="text-2xl font-bold text-emerald-400">Histórico de Apostas</h2>
-         <button onClick={clearHistory} className="flex items-center gap-2 px-3 py-1.5 text-sm font-semibold rounded-md transition-colors bg-red-800 hover:bg-red-700 text-white">
+         <button onClick={clearHistory} className="flex items-center gap-2 px-3 py-1.5 text-sm font-semibold rounded-md transition-colors bg-red-800 hover:bg-red-700 text-white w-full sm:w-auto justify-center">
             <TrashIcon className="w-4 h-4" /> Limpar Histórico
          </button>
        </div>
