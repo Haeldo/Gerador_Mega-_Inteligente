@@ -34,7 +34,7 @@ export interface AnalysisData {
 export interface GeneratedBetsSet {
   id: string;
   timestamp: Date;
-  mode: 'intelligent' | 'random';
+  mode: 'intelligent' | 'random' | 'manual';
   bets: number[][];
   totalCost?: number;
 }

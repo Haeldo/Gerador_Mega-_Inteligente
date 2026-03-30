@@ -123,7 +123,7 @@ export default function App() {
     }
   };
 
-  const addBetsToHistory = (bets: number[][], mode: 'intelligent' | 'random', totalCost: number = 0) => {
+  const addBetsToHistory = (bets: number[][], mode: 'intelligent' | 'random' | 'manual', totalCost: number = 0) => {
     const newSet: GeneratedBetsSet = {
       id: `set-${Date.now()}`,
       timestamp: new Date(),

@@ -42,7 +42,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ history, clearHistory 
                 </h3>
                 <div className="flex gap-4 mt-1">
                     <p className="text-sm text-gray-400">
-                    Modo: <span className="font-medium text-emerald-400">{set.mode === 'intelligent' ? 'Inteligente' : 'Aleatório'}</span>
+                    Modo: <span className="font-medium text-emerald-400">{set.mode === 'intelligent' ? 'Inteligente' : set.mode === 'random' ? 'Aleatório' : 'Manual'}</span>
                     </p>
                     {set.totalCost !== undefined && (
                          <p className="text-sm text-gray-400">
