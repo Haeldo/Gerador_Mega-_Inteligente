@@ -14,7 +14,7 @@ type GenerationMode = 'intelligent' | 'random' | 'manual';
 
 export const GeneratorView: React.FC<GeneratorViewProps> = ({ analysisData, onBetsGenerated }) => {
   const [numGames, setNumGames] = useState<number>(5);
-  const [betValue, setBetValue] = useState<number>(5.00); // Valor padrão da aposta
+  const [betValue, setBetValue] = useState<number>(6.00); // Valor padrão da aposta
   const [dezenasPorJogo, setDezenasPorJogo] = useState<number>(6);
   const [mode, setMode] = useState<GenerationMode>('intelligent');
   const [generatedBets, setGeneratedBets] = useState<number[][]>([]);
