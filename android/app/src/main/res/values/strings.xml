@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Gerador Mega Inteligente</string>
+    <string name="title_activity_main">Gerador Mega Inteligente</string>
+    <string name="package_name">com.haeldo.geradormega</string>
+    <string name="custom_url_scheme">com.haeldo.geradormega</string>
+</resources>
