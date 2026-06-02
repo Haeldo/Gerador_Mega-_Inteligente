@@ -1,17 +1,20 @@
 
 import React, { useRef } from 'react';
 import { DownloadIcon, PhotoIcon, FileIcon } from './icons';
+import { LotteryDraw } from '../types';
 
 interface BetSlipProps {
   betNumber: number;
   numbers: number[];
   winningNumbers?: Set<number>;
+  historicalWins?: { hits: number, draw: LotteryDraw }[];
 }
 
-export const BetSlip: React.FC<BetSlipProps> = ({ betNumber, numbers, winningNumbers }) => {
+export const BetSlip: React.FC<BetSlipProps> = ({ betNumber, numbers, winningNumbers, historicalWins }) => {
   const slipRef = useRef<HTMLDivElement>(null);
   const numbersSet = new Set(numbers);
   const hits = winningNumbers ? numbers.filter(n => winningNumbers.has(n)).length : 0;
+
 
   const handleSaveAsPng = () => {
     if (slipRef.current && (window as any).html2canvas) {
@@ -79,6 +82,32 @@ export const BetSlip: React.FC<BetSlipProps> = ({ betNumber, numbers, winningNum
             )
           })}
         </div>
+        
+        {historicalWins && historicalWins.length > 0 && (
+          <div className="mt-4 p-3 bg-slate-900/50 rounded-lg border border-slate-700 text-sm">
+            <p className="text-gray-300 font-semibold flex items-center gap-2 mb-2">
+              <span className="text-xl">🏆</span> Sorteios Passados:
+            </p>
+            <ul className="space-y-1.5">
+              {historicalWins.slice(0, 3).map((win, i) => (
+                <li key={i} className="flex justify-between items-center text-xs">
+                  <span className={`font-bold px-2 py-0.5 rounded-full ${win.hits === 6 ? 'bg-yellow-500/20 text-yellow-400' : win.hits === 5 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-blue-500/20 text-blue-400'}`}>
+                    {win.hits === 6 ? 'Sena' : win.hits === 5 ? 'Quina' : 'Quadra'}
+                  </span>
+                  <span className="text-gray-400">
+                    Conc. <span className="text-white font-medium">{win.draw.id}</span>
+                  </span>
+                  <span className="text-gray-500">{win.draw.date}</span>
+                </li>
+              ))}
+              {historicalWins.length > 3 && (
+                <li className="text-gray-500 text-xs text-center mt-2 italic">
+                  + {historicalWins.length - 3} outra(s) premiação(ões)...
+                </li>
+              )}
+            </ul>
+          </div>
+        )}
       </div>
        <div className="mt-4 border-t border-gray-700 pt-3 flex justify-end gap-2">
          <button onClick={handleSaveAsPng} className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-md transition-colors text-xs flex items-center gap-1">

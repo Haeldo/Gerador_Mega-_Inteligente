@@ -1,16 +1,18 @@
 
 import React from 'react';
-import { GeneratedBetsSet } from '../types';
+import { GeneratedBetsSet, LotteryDraw } from '../types';
 import { BetSlip } from './BetSlip';
 import { HistoryIcon, TrashIcon, PrinterIcon } from './icons';
 import { generateA4PDF } from '../services/pdfService';
+import { checkHistoricalWins } from '../services/lotteryService';
 
 interface HistoryViewProps {
   history: GeneratedBetsSet[];
+  draws: LotteryDraw[];
   clearHistory: () => void;
 }
 
-export const HistoryView: React.FC<HistoryViewProps> = ({ history, clearHistory }) => {
+export const HistoryView: React.FC<HistoryViewProps> = ({ history, draws, clearHistory }) => {
   if (history.length === 0) {
     return (
       <div className="text-center p-8 text-gray-400 bg-gray-900/50 rounded-lg">
@@ -61,7 +63,12 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ history, clearHistory 
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {set.bets.map((bet, index) => (
-              <BetSlip key={index} betNumber={index + 1} numbers={bet} />
+              <BetSlip 
+                key={index} 
+                betNumber={index + 1} 
+                numbers={bet} 
+                historicalWins={checkHistoricalWins(bet, draws)}
+              />
             ))}
           </div>
         </div>

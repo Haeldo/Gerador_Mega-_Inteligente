@@ -200,9 +200,9 @@ export default function App() {
                     analysisData={analysisData}
                   />
                 )}
-                {activeTab === 'generator' && <GeneratorView analysisData={analysisData} onBetsGenerated={addBetsToHistory} />}
-                {activeTab === 'closing' && <ClosingView analysisData={analysisData} onBetsGenerated={addBetsToHistory} />}
-                {activeTab === 'history' && <HistoryView history={history} clearHistory={() => setHistory([])} />}
+                {activeTab === 'generator' && <GeneratorView analysisData={analysisData} draws={draws} onBetsGenerated={addBetsToHistory} />}
+                {activeTab === 'closing' && <ClosingView analysisData={analysisData} draws={draws} onBetsGenerated={addBetsToHistory} />}
+                {activeTab === 'history' && <HistoryView history={history} draws={draws} clearHistory={() => setHistory([])} />}
                 {activeTab === 'checker' && <CheckerView history={history} draws={draws} />}
                 {activeTab === 'winners' && <WinnersView />}
               </>

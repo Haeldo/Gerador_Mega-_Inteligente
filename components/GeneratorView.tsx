@@ -1,18 +1,20 @@
 
 import React, { useState, useCallback } from 'react';
-import { AnalysisData } from '../types';
+import { AnalysisData, LotteryDraw } from '../types';
 import { generateIntelligentBets } from '../services/geminiService';
+import { checkHistoricalWins } from '../services/lotteryService';
 import { BetSlip } from './BetSlip';
 import { SparklesIcon, CubeIcon } from './icons';
 
 interface GeneratorViewProps {
   analysisData: AnalysisData | null;
+  draws: LotteryDraw[];
   onBetsGenerated: (bets: number[][], mode: GenerationMode, totalCost: number) => void;
 }
 
 type GenerationMode = 'intelligent' | 'random' | 'manual';
 
-export const GeneratorView: React.FC<GeneratorViewProps> = ({ analysisData, onBetsGenerated }) => {
+export const GeneratorView: React.FC<GeneratorViewProps> = ({ analysisData, draws, onBetsGenerated }) => {
   const [numGames, setNumGames] = useState<number>(5);
   const [betValue, setBetValue] = useState<number>(6.00); // Valor padrão da aposta
   const [dezenasPorJogo, setDezenasPorJogo] = useState<number>(6);
@@ -275,7 +277,12 @@ export const GeneratorView: React.FC<GeneratorViewProps> = ({ analysisData, onBe
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {generatedBets.map((bet, index) => (
-                    <BetSlip key={index} betNumber={index + 1} numbers={bet} />
+                    <BetSlip 
+                        key={index} 
+                        betNumber={index + 1} 
+                        numbers={bet} 
+                        historicalWins={checkHistoricalWins(bet, draws)}
+                    />
                 ))}
             </div>
         </div>

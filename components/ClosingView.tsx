@@ -1,17 +1,19 @@
 
 import React, { useState, useMemo } from 'react';
-import { AnalysisData } from '../types';
+import { AnalysisData, LotteryDraw } from '../types';
 import { calculateCombinationCount, generateCombinations } from '../services/mathService';
+import { checkHistoricalWins } from '../services/lotteryService';
 import { BetSlip } from './BetSlip';
 import { GridIcon, SparklesIcon, TrashIcon, PrinterIcon } from './icons';
 import { generateA4PDF } from '../services/pdfService';
 
 interface ClosingViewProps {
   analysisData: AnalysisData | null;
+  draws: LotteryDraw[];
   onBetsGenerated: (bets: number[][], mode: 'intelligent', totalCost: number) => void;
 }
 
-export const ClosingView: React.FC<ClosingViewProps> = ({ analysisData, onBetsGenerated }) => {
+export const ClosingView: React.FC<ClosingViewProps> = ({ analysisData, draws, onBetsGenerated }) => {
   const [selectedNumbers, setSelectedNumbers] = useState<Set<number>>(new Set());
   const [generatedBets, setGeneratedBets] = useState<number[][]>([]);
   const [betValue, setBetValue] = useState<number>(5.00); // Valor padrão da aposta
@@ -214,7 +216,12 @@ export const ClosingView: React.FC<ClosingViewProps> = ({ analysisData, onBetsGe
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {generatedBets.map((bet, index) => (
-                    <BetSlip key={index} betNumber={index + 1} numbers={bet} />
+                    <BetSlip 
+                        key={index} 
+                        betNumber={index + 1} 
+                        numbers={bet} 
+                        historicalWins={checkHistoricalWins(bet, draws)}
+                    />
                 ))}
             </div>
         </div>

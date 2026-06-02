@@ -383,3 +383,20 @@ export const analyzeDraws = (draws: LotteryDraw[]): AnalysisData => {
     averageFrequency,
   };
 };
+
+export const checkHistoricalWins = (bet: number[], draws: LotteryDraw[]): { hits: number, draw: LotteryDraw }[] => {
+  const wins: { hits: number, draw: LotteryDraw }[] = [];
+  const betSet = new Set(bet);
+  
+  for (const draw of draws) {
+    let hits = 0;
+    for (const num of draw.numbers) {
+      if (betSet.has(num)) hits++;
+    }
+    if (hits >= 4) {
+      wins.push({ hits, draw });
+    }
+  }
+  return wins.sort((a, b) => b.hits - a.hits);
+};
+
